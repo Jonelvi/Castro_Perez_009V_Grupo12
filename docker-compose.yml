@@ -1,0 +1,42 @@
+
+services:
+  # 1. BASE DE DATOS (PostgreSQL)
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: hotel_postgres_db
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: root
+      POSTGRES_MULTIPLE_DATABASES: db_auth,db_room,db_reservation,db_payment,db_user,db_hotel,db_checkin,db_notification
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-databases.sh:/docker-entrypoint-initdb.d/init-multiple-databases.sh
+
+  # 2. ZOOKEEPER (Requisito para que Kafka funcione)
+  zookeeper:
+    image: confluentinc/cp-zookeeper:latest
+    container_name: hotel_zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+
+  # 3. APACHE KAFKA (Comunicación asincrónica obligatoria)
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: hotel_kafka
+    depends_on:
+      - zookeeper
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+
+volumes:
+  postgres_data:
